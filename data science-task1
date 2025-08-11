@@ -1,1 +1,94 @@
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
+def extract_data(file_path):
+    """
+    Extracts data from a CSV file into a pandas DataFrame.
+    """
+    try:
+        df = pd.read_csv(file_path)
+        print("✅ Data extracted successfully!")
+        return df
+    except FileNotFoundError:
+        print(f"❌ Error: The file at {file_path} was not found.")
+        return None
+
+def transform_data(df):
+    """
+    Applies a series of transformations to the raw data.
+    """
+    if df is None:
+        return None, None
+
+    # Define features and their types
+    numerical_features = ['age', 'salary']
+    categorical_features = ['city', 'job_title']
+
+    # Create preprocessing pipelines for numerical and categorical data
+    numerical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='mean')),
+        ('scaler', StandardScaler())
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+    ])
+
+    # Combine transformers using ColumnTransformer
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_features),
+            ('cat', categorical_transformer, categorical_features)
+        ])
+
+    # Fit and transform the data
+    transformed_data = preprocessor.fit_transform(df)
+
+    print("✅ Data transformed successfully!")
+    return transformed_data, preprocessor
+
+def load_data(data, output_file_path):
+    """
+    Loads the processed data to a new CSV file.
+    """
+    if data is None:
+        return
+
+    processed_df = pd.DataFrame(data)
+
+    processed_df.to_csv(output_file_path, index=False)
+    print(f"✅ Data loaded successfully to {output_file_path}!")
+
+def run_etl_pipeline(input_path, output_path):
+    """
+    Executes the full ETL pipeline from extraction to loading.
+    """
+    print("--- Starting ETL Pipeline ---")
+
+    # Step 1: Extract
+    raw_df = extract_data(input_path)
+
+    # Step 2: Transform
+    if raw_df is not None:
+        transformed_data, _ = transform_data(raw_df)
+
+        # Step 3: Load
+        if transformed_data is not None:
+            load_data(transformed_data, output_path)
+
+    print("--- ETL Pipeline Finished ---")
+
+# --- Example Usage ---
+# Create a dummy CSV file for demonstration purposes
+data = {'age': [25, 30, None, 45],
+        'salary': [50000, 60000, 75000, 90000],
+        'city': ['New York', 'London', 'Tokyo', 'London'],
+        'job_title': ['Engineer', 'Manager', 'Analyst', 'Manager']}
+dummy_df = pd.DataFrame(data)
+dummy_df.to_csv('/content/aug_test.csv', index=False)
+
+# Run the pipeline
+run_etl_pipeline('/content/aug_test.csv', '/content/processed_aug_test.csv') 
